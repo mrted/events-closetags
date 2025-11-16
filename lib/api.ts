@@ -1,7 +1,6 @@
 // API client utilities for frontend-admin with JWT token refresh logic
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = 'https://eventdemo.pythonanywhere.com/api/v1';
 
 if (process.env.NODE_ENV !== 'production') {
   console.log('Frontend Admin API_BASE_URL:', API_BASE_URL);
