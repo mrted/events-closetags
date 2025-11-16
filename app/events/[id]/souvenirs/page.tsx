@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -36,16 +36,7 @@ export default function SouvenirStatsPage() {
     errors: { guest_name: string; error: string }[];
   } | null>(null);
 
-  useEffect(() => {
-    if (!apiClient.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-
-    fetchData();
-  }, [eventId, router]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [eventResponse, statsResponse] = await Promise.all([
         apiClient.request(`/events/${eventId}/`),
@@ -61,12 +52,21 @@ export default function SouvenirStatsPage() {
         const statsData = await statsResponse.json();
         setStats(statsData);
       }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
+    } catch {
+      console.error('Failed to fetch data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!apiClient.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    fetchData();
+  }, [eventId, router, fetchData]);
 
   const handleDistribute = async () => {
     if (!confirm('Send souvenir QR codes to all guests with email addresses?')) {
@@ -91,7 +91,7 @@ export default function SouvenirStatsPage() {
       } else {
         alert('Failed to distribute souvenir codes');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while distributing codes');
     } finally {
       setIsDistributing(false);
@@ -113,7 +113,7 @@ export default function SouvenirStatsPage() {
         a.click();
         window.URL.revokeObjectURL(url);
       }
-    } catch (error) {
+    } catch {
       alert('Failed to download QR codes');
     }
   };

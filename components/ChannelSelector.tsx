@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, MessageCircle } from 'lucide-react';

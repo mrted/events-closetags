@@ -114,7 +114,7 @@ export default function CheckInScannerPage() {
           }
         }, 2000);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to verify QR code');
       setTimeout(() => {
         if (scannerRef.current) {

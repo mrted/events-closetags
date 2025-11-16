@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Users, FileSpreadsheet, Download, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Upload, AlertCircle, Users, FileSpreadsheet, Download, CheckCircle2 } from 'lucide-react';
 
 interface UploadResult {
   success_count: number;
@@ -62,7 +62,7 @@ export default function GuestUploadPage() {
         const errorData = await response.json();
         alert(errorData.error || 'Failed to upload file');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while uploading the file');
     } finally {
       setIsUploading(false);

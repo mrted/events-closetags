@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,17 +41,17 @@ export default function DeliveryReport({
   const [filterStatus, setFilterStatus] = useState<'all' | 'sent' | 'failed' | 'pending'>('all');
   const [filterChannel, setFilterChannel] = useState<'all' | 'email' | 'whatsapp'>('all');
 
-  const fetchDeliveryReport = async () => {
+  const fetchDeliveryReport = useCallback(async () => {
     try {
       const data = await api.getDeliveryReport(eventId);
-      setGuests(data.guests || []);
+      setGuests((data.guests || []) as GuestDeliveryStatus[]);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch delivery report');
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
 
   useEffect(() => {
     fetchDeliveryReport();
@@ -60,7 +60,7 @@ export default function DeliveryReport({
       const interval = setInterval(fetchDeliveryReport, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [eventId, autoRefresh, refreshInterval]);
+  }, [eventId, autoRefresh, refreshInterval, fetchDeliveryReport]);
 
   const getStatusBadge = (status?: DeliveryStatus) => {
     if (!status) {
@@ -200,7 +200,7 @@ export default function DeliveryReport({
             <label className="text-sm font-medium mr-2">Status:</label>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => setFilterStatus(e.target.value as 'all' | 'sent' | 'failed' | 'pending')}
               className="border rounded px-3 py-1"
             >
               <option value="all">All</option>
@@ -213,7 +213,7 @@ export default function DeliveryReport({
             <label className="text-sm font-medium mr-2">Channel:</label>
             <select
               value={filterChannel}
-              onChange={(e) => setFilterChannel(e.target.value as any)}
+              onChange={(e) => setFilterChannel(e.target.value as 'all' | 'email' | 'whatsapp')}
               className="border rounded px-3 py-1"
             >
               <option value="all">All</option>

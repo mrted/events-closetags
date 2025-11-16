@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
-import { ArrowLeft, Upload, UserPlus, Trash2, Edit, Gift, Camera, BarChart, Calendar, MapPin, Users, UserCheck, QrCode, Mail, Image as ImageIcon, MessageCircle } from 'lucide-react';
-import DeliveryReport from '@/components/DeliveryReport';
+import { ArrowLeft, Upload, UserPlus, Gift, Camera, BarChart, Calendar, MapPin, Users, UserCheck, QrCode, Mail, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import { GuestCheckbox } from '@/components/GuestCheckbox';
 import { SelectionSummary } from '@/components/SelectionSummary';
 import { SouvenirConfirmModal } from '@/components/SouvenirConfirmModal';
@@ -49,9 +48,6 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDistributing, setIsDistributing] = useState(false);
-  const [distributionResult, setDistributionResult] = useState<any | null>(null);
-  const [showDeliveryReport, setShowDeliveryReport] = useState(false);
   
   // Phase 3: Selective Souvenir Distribution state
   const [showSouvenirModal, setShowSouvenirModal] = useState(false);
@@ -61,6 +57,36 @@ export default function EventDetailsPage() {
     filteredGuests: guests // TODO: Update when filters are added
   });
 
+  const fetchEventDetails = useCallback(async () => {
+    try {
+      const response = await apiClient.request(`/events/${eventId}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setEvent(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch event:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [eventId]);
+
+  const fetchGuests = useCallback(async () => {
+    try {
+      const response = await apiClient.request(`/events/${eventId}/guests/`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched guests data:', data);
+        const items = Array.isArray(data)
+          ? data
+          : (data.guests || data.results || []);
+        setGuests(items);
+      }
+    } catch (error) {
+      console.error('Failed to fetch guests:', error);
+    }
+  }, [eventId]);
+
   useEffect(() => {
     if (!apiClient.isAuthenticated()) {
       router.push('/login');
@@ -69,7 +95,7 @@ export default function EventDetailsPage() {
 
     fetchEventDetails();
     fetchGuests();
-  }, [eventId, router]);
+  }, [eventId, router, fetchEventDetails, fetchGuests]);
 
   // Add refresh when component mounts or becomes visible
   useEffect(() => {
@@ -85,159 +111,7 @@ export default function EventDetailsPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [eventId]);
-
-  const fetchEventDetails = async () => {
-    try {
-      const response = await apiClient.request(`/events/${eventId}/`);
-      if (response.ok) {
-        const data = await response.json();
-        setEvent(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch event:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchGuests = async () => {
-    try {
-      const response = await apiClient.request(`/events/${eventId}/guests/`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched guests data:', data);
-        const items = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.results)
-          ? data.results
-          : [];
-        console.log('Parsed guests:', items);
-        setGuests(items);
-      } else {
-        console.error('Failed to fetch guests, status:', response.status);
-      }
-    } catch (error) {
-      console.error('Failed to fetch guests:', error);
-    }
-  };
-
-  const deleteGuest = async (guestId: number) => {
-    if (!confirm('Are you sure you want to delete this guest?')) {
-      return;
-    }
-
-    try {
-      const response = await apiClient.request(`/events/${eventId}/guests/${guestId}/`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        fetchGuests();
-        fetchEventDetails();
-      }
-    } catch (error) {
-      console.error('Failed to delete guest:', error);
-    }
-  };
-
-  const [isDistributingInvitations, setIsDistributingInvitations] = useState(false);
-  const [invitationDistributionResult, setInvitationDistributionResult] = useState<{
-    sent_count: number;
-    failed_count: number;
-    errors: { guest_name: string; error: string }[];
-  } | null>(null);
-  
-  // T056-T057: WhatsApp distribution state
-  const [isDistributingWhatsApp, setIsDistributingWhatsApp] = useState(false);
-  const [whatsappDistributionResult, setWhatsappDistributionResult] = useState<{
-    sent_count: number;
-    failed_count: number;
-    eligible_count: number;
-    errors: { guest_name: string; error: string }[];
-  } | null>(null);
-
-  const handleDistributeInvitations = async () => {
-    // T042: Updated messaging for unified email distribution
-    if (!confirm('Send unified invitations with both check-in and souvenir QR codes to all guests with email addresses?')) {
-      return;
-    }
-
-    setIsDistributingInvitations(true);
-    setInvitationDistributionResult(null);
-
-    try {
-      const response = await apiClient.request(
-        `/events/${eventId}/guests/distribute-invitations/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        setInvitationDistributionResult(result);
-      } else {
-        alert('Failed to send invitation codes');
-      }
-    } catch (error) {
-      console.error('Failed to distribute invitations:', error);
-      alert('Error sending invitations');
-    } finally {
-      setIsDistributingInvitations(false);
-    }
-  };
-  
-  // T056: Handle WhatsApp distribution
-  const handleDistributeWhatsApp = async () => {
-    // T057: Count eligible guests
-    const eligibleGuests = guests.filter(g => g.phone);
-    
-    if (eligibleGuests.length === 0) {
-      alert('No guests with phone numbers found');
-      return;
-    }
-    
-    if (!confirm(`Send WhatsApp messages with both QR codes to ${eligibleGuests.length} guests with phone numbers?`)) {
-      return;
-    }
-
-    setIsDistributingWhatsApp(true);
-    setWhatsappDistributionResult(null);
-
-    try {
-      const response = await apiClient.request(
-        `/events/${eventId}/guests/distribute-whatsapp/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        setWhatsappDistributionResult(result);
-      } else {
-        // Better error handling - check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          alert(`Failed to send WhatsApp messages: ${errorData.error || 'Unknown error'}`);
-        } else {
-          const errorText = await response.text();
-          console.error('Non-JSON error response:', errorText);
-          alert(`Failed to send WhatsApp messages. Server returned error: ${response.status}`);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to distribute WhatsApp:', error);
-      alert(`Error sending WhatsApp messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsDistributingWhatsApp(false);
-    }
-  };
+  }, [fetchEventDetails, fetchGuests]);
 
   // Phase 3: Selective Souvenir Distribution handler
   const handleSelectiveSouvenirDistribution = async (forceResend = false) => {
@@ -257,40 +131,6 @@ export default function EventDetailsPage() {
     } catch (error) {
       // console.error('Selective distribution failed:', error);
       throw error; // Re-throw so modal can show error
-    }
-  };
-
-  // T068: Unified multi-channel distribution handler
-  const handleUnifiedDistribution = async () => {
-    const channels = selectedChannel === 'both' ? ['email', 'whatsapp'] : [selectedChannel];
-    
-    // Calculate eligible counts
-    const emailEligible = guests.filter(g => g.email).length;
-    const whatsappEligible = guests.filter(g => g.phone).length;
-    
-    let message = 'Send invitations via:\n';
-    if (channels.includes('email')) message += `- Email to ${emailEligible} guests\n`;
-    if (channels.includes('whatsapp')) message += `- WhatsApp to ${whatsappEligible} guests\n`;
-    
-    if (!confirm(message)) {
-      return;
-    }
-
-    setIsDistributing(true);
-    setDistributionResult(null);
-
-    try {
-      const result = await apiClient.distributeUnified(eventId, channels);
-      setDistributionResult(result);
-      setShowDeliveryReport(true);
-      
-      // Refresh guest list to update sent status
-      fetchGuests();
-    } catch (error) {
-      console.error('Failed to distribute:', error);
-      alert(error instanceof Error ? error.message : 'Distribution failed');
-    } finally {
-      setIsDistributing(false);
     }
   };
 
@@ -501,37 +341,6 @@ export default function EventDetailsPage() {
           </Link>
         </div>
 
-        {distributionResult && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-3xl border border-blue-200">
-            <h4 className="font-bold text-blue-900 mb-2">Distribution Summary</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-gray-600">Total Eligible:</span>
-                <span className="font-bold ml-2">{distributionResult.total_eligible}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Total Sent:</span>
-                <span className="font-bold ml-2 text-green-600">{distributionResult.total_sent}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Email Sent:</span>
-                <span className="font-bold ml-2">{distributionResult.email?.sent || 0}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">WhatsApp Sent:</span>
-                <span className="font-bold ml-2">{distributionResult.whatsapp?.sent || 0}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* T066: Delivery Report */}
-        {showDeliveryReport && (
-          <div className="mb-6">
-            <DeliveryReport eventId={parseInt(eventId)} />
-          </div>
-        )}
-
         {/* Guest List Card */}
         <div className="bg-white/90 backdrop-blur-md rounded-[40px] shadow-2xl shadow-teal-900/10 p-10">
           {/* Phase 3: Selection Summary */}
@@ -582,14 +391,6 @@ export default function EventDetailsPage() {
                   : `Send with Souvenir to Selected (${guestSelection.selectedCount})`}
               </Button>
 
-              <Button
-                onClick={() => setShowDeliveryReport(!showDeliveryReport)}
-                variant="outline"
-                className="rounded-2xl border-2 border-gray-200 hover:border-[#4FD1C5] hover:bg-teal-50 transition-all px-6"
-              >
-                {showDeliveryReport ? 'Hide' : 'Show'} Delivery Report
-              </Button>
-
               <Link href={`/events/${eventId}/guests/upload`}>
                 <Button className="bg-[#4FD1C5] hover:bg-[#38B2AC] text-white rounded-2xl px-6 font-medium shadow-lg shadow-teal-500/30">
                   <Upload className="mr-2 h-4 w-4" />
@@ -607,132 +408,6 @@ export default function EventDetailsPage() {
               </Link>
             </div>
           </div>
-
-          {invitationDistributionResult && (
-            <div className={`mb-6 p-6 rounded-3xl border-2 ${
-              invitationDistributionResult.failed_count === 0 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-yellow-50 border-yellow-200'
-            }`}>
-              <div className="flex items-start gap-4">
-                <div className="text-3xl">
-                  {invitationDistributionResult.failed_count === 0 ? '✅' : '⚠️'}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-800 mb-2">
-                    {/* T042: Updated messaging for unified invitations */}
-                    Unified Invitation Distribution Complete
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Emails sent with both check-in and souvenir QR codes
-                    {event.banner && ' plus event banner'}
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div className="bg-white rounded-2xl p-4 border border-green-100">
-                      <p className="text-sm text-gray-600">Sent Successfully</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {invitationDistributionResult.sent_count}
-                      </p>
-                    </div>
-                    <div className="bg-white rounded-2xl p-4 border border-red-100">
-                      <p className="text-sm text-gray-600">Failed</p>
-                      <p className="text-2xl font-bold text-red-600">
-                        {invitationDistributionResult.failed_count}
-                      </p>
-                    </div>
-                  </div>
-                  {invitationDistributionResult.errors.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm font-semibold text-gray-700 mb-2">Errors:</p>
-                      <div className="space-y-1">
-                        {invitationDistributionResult.errors.slice(0, 5).map((error, idx) => (
-                          <p key={idx} className="text-sm text-gray-600">
-                            • {error.guest_name}: {error.error}
-                          </p>
-                        ))}
-                        {invitationDistributionResult.errors.length > 5 && (
-                          <p className="text-sm text-gray-500 italic">
-                            ...and {invitationDistributionResult.errors.length - 5} more
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => setInvitationDistributionResult(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
-
-          {whatsappDistributionResult && (
-            <div className={`mb-6 p-6 rounded-3xl border-2 ${
-              whatsappDistributionResult.failed_count === 0 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-yellow-50 border-yellow-200'
-            }`}>
-              <div className="flex items-start gap-4">
-                <div className="text-3xl">
-                  {whatsappDistributionResult.failed_count === 0 ? '✅' : '⚠️'}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-800 mb-2">
-                    WhatsApp Distribution Complete
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Messages sent with both check-in and souvenir QR codes
-                  </p>
-                  <div className="grid grid-cols-3 gap-4 mb-3">
-                    <div className="bg-white rounded-2xl p-4 border border-blue-100">
-                      <p className="text-sm text-gray-600">Eligible</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {whatsappDistributionResult.eligible_count}
-                      </p>
-                    </div>
-                    <div className="bg-white rounded-2xl p-4 border border-green-100">
-                      <p className="text-sm text-gray-600">Sent Successfully</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {whatsappDistributionResult.sent_count}
-                      </p>
-                    </div>
-                    <div className="bg-white rounded-2xl p-4 border border-red-100">
-                      <p className="text-sm text-gray-600">Failed</p>
-                      <p className="text-2xl font-bold text-red-600">
-                        {whatsappDistributionResult.failed_count}
-                      </p>
-                    </div>
-                  </div>
-                  {whatsappDistributionResult.errors.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm font-semibold text-gray-700 mb-2">Errors:</p>
-                      <div className="space-y-1">
-                        {whatsappDistributionResult.errors.slice(0, 5).map((error, idx) => (
-                          <p key={idx} className="text-sm text-gray-600">
-                            • {error.guest_name}: {error.error}
-                          </p>
-                        ))}
-                        {whatsappDistributionResult.errors.length > 5 && (
-                          <p className="text-sm text-gray-500 italic">
-                            ...and {whatsappDistributionResult.errors.length - 5} more
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => setWhatsappDistributionResult(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
 
           {guests.length === 0 ? (
             <div className="py-16 text-center">
@@ -831,16 +506,6 @@ export default function EventDetailsPage() {
                             </a>
                           </Button>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteGuest(guest.id)}
-                          className="rounded-xl hover:bg-red-50 hover:border-red-400 hover:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

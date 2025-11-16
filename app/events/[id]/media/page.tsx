@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { EventMediaUpload } from '@/components/EventMediaUpload';
 import { apiClient } from '@/lib/api';
 import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
@@ -30,16 +29,7 @@ export default function EventMediaPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!apiClient.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-
-    fetchEventDetails();
-  }, [eventId, router]);
-
-  const fetchEventDetails = async () => {
+  const fetchEventDetails = useCallback(async () => {
     try {
       const response = await apiClient.request(`/events/${eventId}/`);
       if (response.ok) {
@@ -53,9 +43,18 @@ export default function EventMediaPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [eventId, router]);
 
-  const handleUploadSuccess = (bannerUrl: string) => {
+  useEffect(() => {
+    if (!apiClient.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    fetchEventDetails();
+  }, [eventId, router, fetchEventDetails]);
+
+  const handleUploadSuccess = () => {
     fetchEventDetails();
   };
 

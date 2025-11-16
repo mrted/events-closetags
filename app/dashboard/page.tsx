@@ -651,7 +651,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {events.map((event, index) => {
+                    {events.map((event) => {
                       const attendanceRate = event.guest_count > 0 
                         ? Math.round((event.checked_in_count / event.guest_count) * 100) 
                         : 0;

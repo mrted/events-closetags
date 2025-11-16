@@ -11,7 +11,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { CheckSquare, Square, X } from 'lucide-react';
+import { CheckSquare, X } from 'lucide-react';
 
 interface BulkActionsProps {
   currentPageCount: number;

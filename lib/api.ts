@@ -178,7 +178,7 @@ class APIClient {
   }
 
   // T060: Unified Multi-Channel Distribution
-  async distributeUnified(eventId: string, channels: string[], guestIds?: number[]): Promise<any> {
+  async distributeUnified(eventId: string, channels: string[], guestIds?: number[]): Promise<{success: boolean; message: string; results?: unknown}> {
     const response = await this.request(`/events/${eventId}/guests/distribute/`, {
       method: 'POST',
       body: JSON.stringify({
@@ -196,7 +196,7 @@ class APIClient {
   }
 
   // T067: Delivery Report API
-  async getDeliveryReport(eventId: number): Promise<any> {
+  async getDeliveryReport(eventId: number): Promise<{entries: unknown[]; stats: unknown; guests?: unknown[]}> {
     const response = await this.request(`/events/${eventId}/delivery-report/`);
     
     if (!response.ok) {
@@ -211,7 +211,7 @@ class APIClient {
     eventId: string, 
     guestIds: number[], 
     forceResend: boolean = false
-  ): Promise<any> {
+  ): Promise<{success: boolean; message: string; results?: unknown}> {
     const payload = {
       guest_ids: guestIds,
       force_resend: forceResend
@@ -228,7 +228,7 @@ class APIClient {
     if (!response.ok) {
       const errorText = await response.text();
 
-      let parsed: any = null;
+      let parsed: {warning?: string; error?: string; message?: string} | null = null;
       try {
         parsed = JSON.parse(errorText);
       } catch {
@@ -245,7 +245,7 @@ class APIClient {
       }
 
       const errorMessage = parsed?.error || parsed?.message || 'Selective distribution failed';
-      const error: any = new Error(errorMessage);
+      const error = new Error(errorMessage) as Error & {details?: unknown};
       if (parsed) {
         error.details = parsed;
       }

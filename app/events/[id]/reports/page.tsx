@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -65,16 +65,7 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
 
-  useEffect(() => {
-    if (!apiClient.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-
-    fetchReports();
-  }, [eventId, router]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       const [summaryResponse, detailsResponse] = await Promise.all([
         apiClient.request(`/events/${eventId}/reports/summary/`),
@@ -90,12 +81,21 @@ export default function ReportsPage() {
         const detailsData = await detailsResponse.json();
         setAttendanceDetails(detailsData);
       }
-    } catch (error) {
-      console.error('Failed to fetch reports:', error);
+    } catch {
+      console.error('Failed to fetch reports');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!apiClient.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    fetchReports();
+  }, [eventId, router, fetchReports]);
 
   const handleExportCSV = async () => {
     try {
@@ -110,7 +110,7 @@ export default function ReportsPage() {
         a.click();
         window.URL.revokeObjectURL(url);
       }
-    } catch (error) {
+    } catch {
       alert('Failed to export CSV');
     }
   };

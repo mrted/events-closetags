@@ -67,12 +67,12 @@ export function SouvenirConfirmModal({
         setResult(null);
       }, 2000);
     } catch (error) {
-      const errorObj = error as any;
+      const errorObj = error as {isWarning?: boolean; type?: string; details?: {already_sent_count?: number}};
       
       // Check if it's the already_sent warning
       if (errorObj?.isWarning && errorObj?.type === 'already_sent') {
         setIsDistributing(false);
-        const alreadySentCount = errorObj.details?.count ?? 0;
+        const alreadySentCount = errorObj.details?.already_sent_count ?? 0;
         const proceed = window.confirm(
           alreadySentCount > 0
             ? `${alreadySentCount} ${alreadySentCount === 1 ? 'guest has' : 'guests have'} already received invitations. Send again anyway?`

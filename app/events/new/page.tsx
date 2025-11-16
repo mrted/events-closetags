@@ -47,7 +47,7 @@ export default function NewEventPage() {
         const errorData = await response.json();
         setError(errorData.detail || 'Failed to create event');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while creating the event');
     } finally {
       setIsLoading(false);
