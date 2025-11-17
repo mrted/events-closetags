@@ -126,7 +126,7 @@ export function EventMediaUpload({
       }, 200);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://fevent.pythonanywhere.com/api/v1'}/events/${eventId}/media/`,
+        `https://eventdemo.pythonanywhere.com/api/v1/events/${eventId}/media/`,
         {
           method: 'POST',
           headers: {
@@ -169,7 +169,7 @@ export function EventMediaUpload({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://fevent.pythonanywhere.com/api/v1'}/events/${eventId}/media/`,
+        `https://eventdemo.pythonanywhere.com/api/v1/events/${eventId}/media/`,
         {
           method: 'DELETE',
           headers: {
